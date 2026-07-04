@@ -31,3 +31,6 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Docker (ajustes locales, convención PuckZone) ###
+docker-compose.override.yml

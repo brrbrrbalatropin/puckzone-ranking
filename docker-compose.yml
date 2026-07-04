@@ -1,0 +1,41 @@
+# Desarrollo local de puckzone-ranking.
+#
+# Solo la base de datos (app desde el IDE):  docker compose up -d ranking-db
+# Todo contenedorizado:                      docker compose up --build
+#
+# El Postgres se expone en el 5434 del host porque el 5432 lo ocupa el
+# PostgreSQL local de la máquina y el 5433 lo usa puckzone-auth.
+# application.yaml ya apunta a localhost:5434 por defecto.
+
+services:
+  ranking-db:
+    image: postgres:17
+    container_name: puckzone-ranking-db
+    environment:
+      POSTGRES_DB: puckzone_ranking
+      POSTGRES_USER: puckzone
+      POSTGRES_PASSWORD: puckzone
+    ports:
+      - "5434:5432"
+    volumes:
+      - ranking-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U puckzone -d puckzone_ranking"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  ranking:
+    build: .
+    container_name: puckzone-ranking
+    depends_on:
+      ranking-db:
+        condition: service_healthy
+    environment:
+      POSTGRES_HOST: ranking-db
+      POSTGRES_PORT: 5432
+    ports:
+      - "8084:8084"
+
+volumes:
+  ranking-db-data:
