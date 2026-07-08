@@ -39,21 +39,30 @@ public class PlayerService {
                         new Player(id, username, university, properties.initialElo())));
     }
 
-    /** Leaderboard global: top N jugadores por ELO descendente, con posición 1-based. */
+    /**
+     * Leaderboard global: top N jugadores por ELO descendente, con posición
+     * 1-based. Solo jugadores con partidas humanas (ver PlayerRepository).
+     */
     @Transactional(readOnly = true)
     public List<PlayerRankingResponse> getGlobalRanking(int limit) {
-        List<Player> top = playerRepository.findAllByOrderByEloDesc(PageRequest.of(0, limit));
+        List<Player> top = playerRepository.findLeaderboard(PageRequest.of(0, limit));
         return IntStream.range(0, top.size())
                 .mapToObj(i -> PlayerRankingResponse.of(top.get(i), i + 1L))
                 .toList();
     }
 
-    /** ELO, posición global y estadísticas de un jugador puntual. */
+    /**
+     * ELO, posición global y estadísticas de un jugador puntual. La posición
+     * es null si solo ha jugado contra el bot: existe pero no está rankeado.
+     */
     @Transactional(readOnly = true)
     public PlayerRankingResponse getPlayer(UUID id) {
         Player player = playerRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("No existe el jugador " + id));
-        long position = playerRepository.countByEloGreaterThan(player.getElo()) + 1;
+        boolean ranked = player.getWins() > 0 || player.getLosses() > 0;
+        Long position = ranked
+                ? playerRepository.countRankedWithEloGreaterThan(player.getElo()) + 1
+                : null;
         return PlayerRankingResponse.of(player, position);
     }
 
