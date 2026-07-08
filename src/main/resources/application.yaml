@@ -13,11 +13,18 @@ spring:
       ddl-auto: update
     open-in-view: false
 
+# Actuator: habilita los grupos liveness/readiness que Azure Container Apps
+# usa como health probes (sin esto /actuator/health/liveness devuelve 404).
 management:
   endpoints:
     web:
       exposure:
         include: health,info
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
 
 puckzone:
   ranking:
