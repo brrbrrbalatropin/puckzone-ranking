@@ -52,6 +52,15 @@
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
         </dependency>
+        <!-- Documentacion OpenAPI/Swagger. OJO: 2.8.6 esta hecha para Boot 3;
+             aun no existe springdoc para Boot 4 (verificado 2026-07-08 en Maven
+             Central). Funciona para generar /v3/api-docs; si una actualizacion
+             de Boot la rompe, subir a springdoc 3.x cuando salga. -->
+        <dependency>
+            <groupId>org.springdoc</groupId>
+            <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+            <version>2.8.6</version>
+        </dependency>
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
