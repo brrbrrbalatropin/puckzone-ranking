@@ -40,24 +40,16 @@ public class MatchService {
             return new MatchProcessedResponse(record.getWinnerId(), 0,
                     record.getLoserId(), 0, record.getEloDelta());
         }
-        return request.vsBot() ? processBotMatch(request) : processHumanMatch(request);
+        if (request.vsBot()) {
+            return processBotMatch(request);
+        }
+        return request.friendly() ? processFriendlyMatch(request) : processHumanMatch(request);
     }
 
     private MatchProcessedResponse processHumanMatch(MatchResultRequest request) {
-        if (request.winnerId() == null || request.loserId() == null) {
-            throw new IllegalArgumentException("winnerId y loserId son obligatorios entre humanos");
-        }
-        if (request.winnerId().equals(request.loserId())) {
-            throw new IllegalArgumentException("winnerId y loserId no pueden ser el mismo jugador");
-        }
-        if (isBlank(request.winnerUniversity()) || isBlank(request.loserUniversity())) {
-            throw new IllegalArgumentException("winnerUniversity y loserUniversity son obligatorias entre humanos");
-        }
-
-        Player winner = playerService.getOrCreate(
-                request.winnerId(), request.winnerUsername(), request.winnerUniversity());
-        Player loser = playerService.getOrCreate(
-                request.loserId(), request.loserUsername(), request.loserUniversity());
+        var players = validatedHumans(request);
+        Player winner = players[0];
+        Player loser = players[1];
 
         int winnerOldElo = winner.getElo();
         int loserOldElo = loser.getElo();
@@ -70,7 +62,7 @@ public class MatchService {
                 winner.getId(), loser.getId(),
                 winner.getUsername(), loser.getUsername(),
                 request.winnerScore(), request.loserScore(),
-                false, delta));
+                false, false, delta));
 
         log.info("Partida {} procesada: {} ({} -> {}) le ganó {}-{} a {} ({} -> {}), delta {}",
                 request.matchId(),
@@ -83,6 +75,50 @@ public class MatchService {
                 winner.getId(), winner.getElo(),
                 loser.getId(), loser.getElo(),
                 delta);
+    }
+
+    /**
+     * Amistosa (sala privada): dos humanos reales, así que valida y registra
+     * como partida humana, pero sin mover ELO ni contadores — regla de
+     * negocio: lo pactado entre amigos no puede inflar el ranking. Ambos
+     * quedan creados con el ELO inicial si era su primera partida.
+     */
+    private MatchProcessedResponse processFriendlyMatch(MatchResultRequest request) {
+        var players = validatedHumans(request);
+        Player winner = players[0];
+        Player loser = players[1];
+
+        matchRecordRepository.save(new MatchRecord(request.matchId(),
+                winner.getId(), loser.getId(),
+                winner.getUsername(), loser.getUsername(),
+                request.winnerScore(), request.loserScore(),
+                false, true, 0));
+
+        log.info("Partida amistosa {} registrada: {} le ganó {}-{} a {} (sin efecto en ELO)",
+                request.matchId(), winner.getId(),
+                request.winnerScore(), request.loserScore(), loser.getId());
+
+        return new MatchProcessedResponse(
+                winner.getId(), winner.getElo(),
+                loser.getId(), loser.getElo(),
+                0);
+    }
+
+    /** Validaciones comunes a rankeada y amistosa; devuelve {ganador, perdedor}. */
+    private Player[] validatedHumans(MatchResultRequest request) {
+        if (request.winnerId() == null || request.loserId() == null) {
+            throw new IllegalArgumentException("winnerId y loserId son obligatorios entre humanos");
+        }
+        if (request.winnerId().equals(request.loserId())) {
+            throw new IllegalArgumentException("winnerId y loserId no pueden ser el mismo jugador");
+        }
+        if (isBlank(request.winnerUniversity()) || isBlank(request.loserUniversity())) {
+            throw new IllegalArgumentException("winnerUniversity y loserUniversity son obligatorias entre humanos");
+        }
+        return new Player[]{
+                playerService.getOrCreate(request.winnerId(), request.winnerUsername(), request.winnerUniversity()),
+                playerService.getOrCreate(request.loserId(), request.loserUsername(), request.loserUniversity())
+        };
     }
 
     private MatchProcessedResponse processBotMatch(MatchResultRequest request) {
@@ -98,8 +134,6 @@ public class MatchService {
             throw new IllegalArgumentException("la universidad del humano es obligatoria");
         }
 
-        // Registra al jugador si es su primera partida (ELO inicial), pero sin
-        // aplicar resultado: vs bot no hay delta ni victoria/derrota que contar.
         Player human = playerService.getOrCreate(humanId, humanUsername, humanUniversity);
 
         matchRecordRepository.save(new MatchRecord(request.matchId(),
@@ -107,7 +141,7 @@ public class MatchService {
                 humanWon ? human.getUsername() : BOT_NAME,
                 humanWon ? BOT_NAME : human.getUsername(),
                 request.winnerScore(), request.loserScore(),
-                true, 0));
+                true, false, 0));
 
         log.info("Partida {} vs BOT registrada: {} {} {}-{} (sin efecto en ELO)",
                 request.matchId(), human.getId(), humanWon ? "ganó" : "perdió",

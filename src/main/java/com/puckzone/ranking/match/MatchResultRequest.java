@@ -18,6 +18,11 @@ import java.util.UUID;
  * {@code @NotNull} aquí: la validación condicional vive en {@link MatchService}.
  * Las partidas contra el bot NO mueven ELO ni contadores: solo dejan registro
  * en el historial con delta 0.
+ *
+ * <p>Si {@code friendly} es true (sala privada entre amigos), la partida es
+ * entre dos humanos reales pero tampoco mueve ELO ni contadores: queda en el
+ * historial de ambos con delta 0. Los reportes viejos no traen el campo y
+ * caen a false (partida rankeada normal).
  */
 public record MatchResultRequest(
 
@@ -25,6 +30,8 @@ public record MatchResultRequest(
         String matchId,
 
         boolean vsBot,
+
+        boolean friendly,
 
         /** null solo cuando vsBot y ganó el bot. */
         UUID winnerId,
