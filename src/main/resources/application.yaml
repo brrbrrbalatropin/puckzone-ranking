@@ -19,7 +19,9 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        # prometheus: métricas para el Prometheus interno del environment
+        # (la app es interna: el endpoint no es alcanzable desde internet).
+        include: health,info,prometheus
   endpoint:
     health:
       probes:
