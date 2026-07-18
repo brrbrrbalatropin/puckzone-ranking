@@ -12,10 +12,16 @@ resource "azurerm_container_app" "ranking" {
   }
 
   template {
-    # Ranking es stateless (todo vive en Postgres): 1 replica alcanza para la
-    # carga del proyecto.
-    min_replicas = 1
-    max_replicas = 1
+    # Ranking es stateless (todo vive en Postgres): min 2 replicas para alta
+    # disponibilidad (los leaderboards y el reporte de partidas sobreviven la
+    # caida de una) y autoscaling HTTP hasta 3 con trafico concurrente.
+    min_replicas = 2
+    max_replicas = 3
+
+    http_scale_rule {
+      name                = "http-concurrency"
+      concurrent_requests = "50"
+    }
 
     container {
       # 0.5/1Gi como game y auth: con menos CPU el arranque de Spring supera
