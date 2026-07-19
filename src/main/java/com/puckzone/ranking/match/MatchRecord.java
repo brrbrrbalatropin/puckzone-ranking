@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -63,10 +64,13 @@ public class MatchRecord {
     @Column(nullable = false)
     private Instant playedAt;
 
-    public MatchRecord(String matchId, UUID winnerId, UUID loserId,
-                       String winnerUsername, String loserUsername,
-                       int winnerScore, int loserScore,
-                       boolean vsBot, boolean friendly, int eloDelta) {
+    // Se construye solo vía builder (10 campos posicionales eran ilegibles
+    // y propensos a trastocar argumentos del mismo tipo).
+    @Builder
+    private MatchRecord(String matchId, UUID winnerId, UUID loserId,
+                        String winnerUsername, String loserUsername,
+                        int winnerScore, int loserScore,
+                        boolean vsBot, boolean friendly, int eloDelta) {
         this.matchId = matchId;
         this.winnerId = winnerId;
         this.loserId = loserId;

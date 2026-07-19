@@ -36,9 +36,9 @@ public class MatchService {
         var existing = matchRecordRepository.findById(request.matchId());
         if (existing.isPresent()) {
             log.info("Partida {} ya estaba procesada: retry ignorado", request.matchId());
-            MatchRecord record = existing.get();
-            return new MatchProcessedResponse(record.getWinnerId(), 0,
-                    record.getLoserId(), 0, record.getEloDelta());
+            MatchRecord processed = existing.get();
+            return new MatchProcessedResponse(processed.getWinnerId(), 0,
+                    processed.getLoserId(), 0, processed.getEloDelta());
         }
         if (request.vsBot()) {
             return processBotMatch(request);
@@ -58,11 +58,13 @@ public class MatchService {
         playerService.applyResult(winner, winnerOldElo + delta, true);
         playerService.applyResult(loser, Math.max(loserOldElo - delta, 0), false);
 
-        matchRecordRepository.save(new MatchRecord(request.matchId(),
-                winner.getId(), loser.getId(),
-                winner.getUsername(), loser.getUsername(),
-                request.winnerScore(), request.loserScore(),
-                false, false, delta));
+        matchRecordRepository.save(MatchRecord.builder()
+                .matchId(request.matchId())
+                .winnerId(winner.getId()).loserId(loser.getId())
+                .winnerUsername(winner.getUsername()).loserUsername(loser.getUsername())
+                .winnerScore(request.winnerScore()).loserScore(request.loserScore())
+                .vsBot(false).friendly(false).eloDelta(delta)
+                .build());
 
         log.info("Partida {} procesada: {} ({} -> {}) le ganó {}-{} a {} ({} -> {}), delta {}",
                 request.matchId(),
@@ -88,11 +90,13 @@ public class MatchService {
         Player winner = players[0];
         Player loser = players[1];
 
-        matchRecordRepository.save(new MatchRecord(request.matchId(),
-                winner.getId(), loser.getId(),
-                winner.getUsername(), loser.getUsername(),
-                request.winnerScore(), request.loserScore(),
-                false, true, 0));
+        matchRecordRepository.save(MatchRecord.builder()
+                .matchId(request.matchId())
+                .winnerId(winner.getId()).loserId(loser.getId())
+                .winnerUsername(winner.getUsername()).loserUsername(loser.getUsername())
+                .winnerScore(request.winnerScore()).loserScore(request.loserScore())
+                .vsBot(false).friendly(true).eloDelta(0)
+                .build());
 
         log.info("Partida amistosa {} registrada: {} le ganó {}-{} a {} (sin efecto en ELO)",
                 request.matchId(), winner.getId(),
@@ -136,12 +140,14 @@ public class MatchService {
 
         Player human = playerService.getOrCreate(humanId, humanUsername, humanUniversity);
 
-        matchRecordRepository.save(new MatchRecord(request.matchId(),
-                humanWon ? humanId : null, humanWon ? null : humanId,
-                humanWon ? human.getUsername() : BOT_NAME,
-                humanWon ? BOT_NAME : human.getUsername(),
-                request.winnerScore(), request.loserScore(),
-                true, false, 0));
+        matchRecordRepository.save(MatchRecord.builder()
+                .matchId(request.matchId())
+                .winnerId(humanWon ? humanId : null).loserId(humanWon ? null : humanId)
+                .winnerUsername(humanWon ? human.getUsername() : BOT_NAME)
+                .loserUsername(humanWon ? BOT_NAME : human.getUsername())
+                .winnerScore(request.winnerScore()).loserScore(request.loserScore())
+                .vsBot(true).friendly(false).eloDelta(0)
+                .build());
 
         log.info("Partida {} vs BOT registrada: {} {} {}-{} (sin efecto en ELO)",
                 request.matchId(), human.getId(), humanWon ? "ganó" : "perdió",
@@ -158,7 +164,7 @@ public class MatchService {
     public List<PlayerMatchResponse> getPlayerMatches(UUID playerId, int limit) {
         return matchRecordRepository.findRecentByPlayer(playerId, PageRequest.of(0, limit))
                 .stream()
-                .map(record -> PlayerMatchResponse.of(record, playerId))
+                .map(match -> PlayerMatchResponse.of(match, playerId))
                 .toList();
     }
 

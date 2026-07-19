@@ -20,18 +20,22 @@ public record PlayerMatchResponse(
         Instant playedAt
 ) {
 
-    public static PlayerMatchResponse of(MatchRecord record, UUID playerId) {
-        boolean won = playerId.equals(record.getWinnerId());
+    public static PlayerMatchResponse of(MatchRecord match, UUID playerId) {
+        boolean won = playerId.equals(match.getWinnerId());
+        int eloChange = 0;
+        if (!match.isVsBot() && !match.isFriendly()) {
+            eloChange = won ? match.getEloDelta() : -match.getEloDelta();
+        }
         return new PlayerMatchResponse(
-                record.getMatchId(),
-                won ? record.getLoserUsername() : record.getWinnerUsername(),
-                record.isVsBot(),
-                record.isFriendly(),
+                match.getMatchId(),
+                won ? match.getLoserUsername() : match.getWinnerUsername(),
+                match.isVsBot(),
+                match.isFriendly(),
                 won,
-                won ? record.getWinnerScore() : record.getLoserScore(),
-                won ? record.getLoserScore() : record.getWinnerScore(),
-                record.isVsBot() || record.isFriendly() ? 0 : (won ? record.getEloDelta() : -record.getEloDelta()),
-                record.getPlayedAt()
+                won ? match.getWinnerScore() : match.getLoserScore(),
+                won ? match.getLoserScore() : match.getWinnerScore(),
+                eloChange,
+                match.getPlayedAt()
         );
     }
 }

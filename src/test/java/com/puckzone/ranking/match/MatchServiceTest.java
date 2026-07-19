@@ -134,16 +134,19 @@ class MatchServiceTest {
     @Test
     void losReportesInvalidosSeRechazan() {
         // vs bot con ambos ids (o ninguno): no se sabe quién es el humano.
-        assertThatThrownBy(() -> service.processMatch(new MatchResultRequest("m-x", true, false,
-                ANA, BETO, "ana", "beto", "escuelaing", "unal", 7, 1, 60)))
+        var botAmbiguo = new MatchResultRequest("m-x", true, false,
+                ANA, BETO, "ana", "beto", "escuelaing", "unal", 7, 1, 60);
+        assertThatThrownBy(() -> service.processMatch(botAmbiguo))
                 .isInstanceOf(IllegalArgumentException.class);
         // Humana contra sí mismo.
-        assertThatThrownBy(() -> service.processMatch(new MatchResultRequest("m-y", false, false,
-                ANA, ANA, "ana", "ana", "escuelaing", "escuelaing", 7, 1, 60)))
+        var contraSiMismo = new MatchResultRequest("m-y", false, false,
+                ANA, ANA, "ana", "ana", "escuelaing", "escuelaing", 7, 1, 60);
+        assertThatThrownBy(() -> service.processMatch(contraSiMismo))
                 .isInstanceOf(IllegalArgumentException.class);
         // Humana sin universidades.
-        assertThatThrownBy(() -> service.processMatch(new MatchResultRequest("m-z", false, false,
-                ANA, BETO, "ana", "beto", null, null, 7, 1, 60)))
+        var sinUniversidades = new MatchResultRequest("m-z", false, false,
+                ANA, BETO, "ana", "beto", null, null, 7, 1, 60);
+        assertThatThrownBy(() -> service.processMatch(sinUniversidades))
                 .isInstanceOf(IllegalArgumentException.class);
         assertThat(matchRecords.count()).isZero();
     }

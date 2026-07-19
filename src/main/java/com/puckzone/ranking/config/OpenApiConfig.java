@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Metadatos del API para springdoc. El esquema bearer-jwt habilita el botón
- * Authorize de Swagger UI: el gateway exige el token en todo /api/** (este
+ * Authorize de Swagger UI: el gateway exige el token en cada ruta /api/** (este
  * servicio no lo valida aún, pero las llamadas de la UI pasan por el gateway).
  */
 @Configuration
