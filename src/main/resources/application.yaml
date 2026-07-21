@@ -8,6 +8,17 @@ spring:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5434}/${POSTGRES_DB:puckzone_ranking}
     username: ${POSTGRES_USER:puckzone}
     password: ${POSTGRES_PASSWORD:puckzone}
+    # El Postgres compartido es B1ms: max_connections = 50 y no se puede subir.
+    # Con el default de Hikari (pool 10 e idle 10) cada replica retenia 10
+    # conexiones aunque estuviera ociosa; entre auth, ranking y los 2 shards
+    # de game se pedian ~60 sobre un techo de 50. Consecuencia real: un deploy
+    # necesita la revision nueva arriba mientras la vieja aun conserva las
+    # suyas, y la nueva no conseguia NI UNA ("FATAL: remaining connection
+    # slots are reserved for roles with the SUPERUSER attribute") -> revision
+    # Failed y ACA siguiendo con la vieja. Techo por replica, no por servicio.
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:5}
+      minimum-idle: ${DB_POOL_IDLE:2}
   jpa:
     hibernate:
       ddl-auto: update
